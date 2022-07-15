@@ -17,15 +17,15 @@ def join_quit_image(status,member):
 
     font_dir = 'font/malgunsl.ttf'
 
-    x = left_margin + picture_size + right_margin
-    y = top_margin + picture_size + bottom_margin
+    x = left_margin + picture_size + right_margin #사진의 여백(좌 여백 + 사진 크기(가로) + 우 여백)
+    y = top_margin + picture_size + bottom_margin #전체의 여백(상 여백 + 사진 크기(세로) + 하 여백)
 
     font = ImageFont.truetype(font_dir, 70)
-    size = font.getsize(f'[Join] {member}')[0]
+    size = font.getsize(f'[{status}] {member}')[0]
 
-    base_image = Image.new('RGB',(x + size + right_margin , y + 15))
+    base_image = Image.new('RGB',(x + size + right_margin , y)) # 사진의 여백 + 쓸 글씨의 크기 + 우 여백
 
-    url = str(member.avatar_url).replace("webp?size=1024","jpg")
+    url = str(member.avatar_url).replace("webp?size=1024","jpg") #url 변환
     res_url = requests.get(url).content
     img = Image.open(io.BytesIO(res_url))
     re_img = img.resize((120,120))

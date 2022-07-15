@@ -17,6 +17,8 @@ import requests
 import server_move_image as movement
 import server_everything_id as server_info
 import server_chatting_protection as server_chat
+import Assistant_commands as commands
+import help_command as help
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -62,6 +64,9 @@ async def on_member_remove(member):
 async def on_raw_reaction_add(payload):
     if payload.message_id != send_message.id or payload.member.bot == True:
         return
+    
+    if payload.user_id != uid:
+        return
 
     guild = client.get_guild(payload.guild_id)
     member = guild.get_member(payload.user_id)
@@ -69,6 +74,7 @@ async def on_raw_reaction_add(payload):
     if str(payload.emoji) == "✔️":
         await member.move_to(channel = created_voice_channel)
         await closed_channel(None)
+
     elif str(payload.emoji) == "✖️":
         await created_voice_channel.delete()
         await send_message.delete()
@@ -82,28 +88,26 @@ async def on_message(message):
     if message.author.bot: #봇끼리 반응 X
         return
     
-    if message.content.startswith("서현"):
-        string_old = message.content.lower().split("서현")
-        string = string_old[1].split()
+    if message.content.startswith("서현") or message.content.startswith("%"):
+        if message.content.startswith("서현"):
+            string = message.content.lower().split()
+            n = 1
+        else:
+            string_old = message.content.lower().split("%")
+            string = string_old[1].split()
+            n = 0
         try:
-            if string[0] == "채널":
+            if help.command_list[string[n]] == "채널":
                 await message.delete()
-                user_limit_num = None
-                for i in string:
-                    splitstring = i.split("'")
-                    if len(splitstring) != 1:
-                        if splitstring[1].isdecimal() == True:
-                            user_limit_num = int(splitstring[1])
-                            del_num = string.index(i)
-                            del string[del_num]
-                        else:
-                            embed=discord.Embed(description="**정수를 입력해야 합니다!**", color=0x0000ff)
-                            await message.channel.send(embed=embed, delete_after = 3)
-                            return
+                user_limit_num = await commands.check_whether_num(message, string)
 
                 channellist = string
                 del channellist[0]
                 channelname = ' '.join(channellist)
+
+                global uid #유저 아이디를 전역변수화 시킴으로써 반응에서 이 유저 제외하고 못쓰게 만듦
+                uid = message.author.id
+
                 global created_voice_channel
                 created_voice_channel = await message.guild.categories[3].create_voice_channel(channelname, user_limit=user_limit_num)
                 embed=discord.Embed(title="**[JOIN]**", description=f"**<#{created_voice_channel.id}> 여기를 눌러 입장합니다!**", color=0x0000ff)
@@ -115,15 +119,7 @@ async def on_message(message):
                 await send_message.add_reaction("✖️") #heavy_multiplication_x
                 
         except Exception as e:
-            embed=discord.Embed(title="**에러!**", description=f"**오류가 발생했습니다!**", color=0x0000ff)
-            embed.add_field(name = "내용", value = f"```{e}```")
-            await message.channel.send(embed=embed, delete_after = 30)
-            
-            Bot_owner = client.get_user(server_info.server_owner_id)
-            channel = await Bot_owner.create_dm()
-            embed=discord.Embed(title="**에러!**", description=f"**니가 또 코딩을 잘못했습니다!**", color=0x0000ff)
-            embed.add_field(name = "내용", value = f"```{e}```")
-            embed.add_field(name = "서버", value = f'{message.author.guild.name}')
-            await channel.send(embed=embed)
+            print(e)
+            await commands.notice_error(message, client, e)
 
 client.run(TOKEN)

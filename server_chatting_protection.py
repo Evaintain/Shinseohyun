@@ -3,7 +3,9 @@ import asyncio
 import server_everything_id as server_info
 
 async def protection_text_channel(message):
-    member_roles=message.author.roles
+    get_member = message.author.guild.get_member(message.author.id)
+
+    member_roles = get_member.roles
     n = 0
     for i in member_roles:
         if int(i.id) == server_info.ban_role_id:

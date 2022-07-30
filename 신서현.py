@@ -29,6 +29,8 @@ intents = discord.Intents.default()
 intents.members = True
 intents.presences = True
 intents.reactions = True
+intents.dm_messages = True
+intents.messages = True
 # create the instance
 client = discord.Client(intents=intents)
 
@@ -69,21 +71,33 @@ async def on_raw_reaction_add(payload):
         return
 
     guild = client.get_guild(payload.guild_id)
+    channel = client.get_channel(payload.channel_id)
     member = guild.get_member(payload.user_id)
 
     if str(payload.emoji) == "✔️":
-        await member.move_to(channel = created_voice_channel)
-        await closed_channel(None)
+        try:
+            await member.move_to(channel = created_voice_channel)
+            await closed_channel(None)
+        except:
+            await commands.voice_move_error(member)
 
     elif str(payload.emoji) == "✖️":
         await created_voice_channel.delete()
         await send_message.delete()
         await closed_channel(True)
+    
+    elif str(payload.emoji) == "🟣" or str(payload.emoji) == "🟢" or str(payload.emoji) == "🟠" or str(payload.emoji) == "🔴" or str(payload.emoji) == "⚫":
+        await send_message.delete()
+        global status
+        status = await commands.assistant_raw_reaction_add(payload)
+
+        global server_user_image
+        server_user_image = await commands.server_users_image(guild, channel, status)
 
 @client.event
 async def on_message(message):
     #도배막기
-    await server_chat.protection_text_channel(message)
+    await server_chat.protection_text_channel(client, message)
     
     if message.author.bot: #봇끼리 반응 X
         return
@@ -99,27 +113,45 @@ async def on_message(message):
         try:
             if help.command_list[string[n]] == "채널":
                 await message.delete()
-                user_limit_num = await commands.check_whether_num(message, string)
-
-                channellist = string
-                del channellist[0]
-                channelname = ' '.join(channellist)
-
-                global uid #유저 아이디를 전역변수화 시킴으로써 반응에서 이 유저 제외하고 못쓰게 만듦
-                uid = message.author.id
 
                 global created_voice_channel
-                created_voice_channel = await message.guild.categories[3].create_voice_channel(channelname, user_limit=user_limit_num)
+                created_voice_channel = await message.guild.categories[3].create_voice_channel(f"{message.author.name}의 채널")
+
+                await created_voice_channel.set_permissions(message.author, manage_channels = True)
+
                 embed=discord.Embed(title="**[JOIN]**", description=f"**<#{created_voice_channel.id}> 여기를 눌러 입장합니다!**", color=0x0000ff)
                 embed.set_footer(text = "이 메시지는 30초 뒤에 삭제됩니다! 채널 이동을 원하시면 ✔️를, 채널 삭제를 원하시면 ✖️를 눌러주세요!")
 
                 global send_message
-                send_message = await message.channel.send(embed=embed, delete_after = 30)
+                send_message = await message.channel.send(embed = embed, delete_after = 30)
+                
+                global uid #유저 아이디를 전역변수화 시킴으로써 반응에서 이 유저 제외하고 못쓰게 만듦
+                uid = message.author.id
+
                 await send_message.add_reaction("✔️") #heavy_check_mark
                 await send_message.add_reaction("✖️") #heavy_multiplication_x
+            
+            if help.command_list[string[n]] == "서버명단":
+                await message.delete()
+
+                uid = message.author.id
+
+                embed=discord.Embed(title="**[설명]**", description=f"**🟣 전체 \| 🟢 온라인 \| 🟠 자리비움 \| 🔴 다른 용무중 \| ⚫ 오프라인**", color=0x0000ff)
+                embed.set_footer(text = "컴퓨터 | 노트북 에 켜져있는 디스코드만 적용됩니다!")
+                send_message = await message.channel.send(embed=embed, delete_after = 30)
+
+                await send_message.add_reaction("🟣") #purple_circle
+                await send_message.add_reaction("🟢") #green_circle
+                await send_message.add_reaction("🟠") #orange_circle
+                await send_message.add_reaction("🔴") #red_circle
+                await send_message.add_reaction("⚫") #black_circle
+            
+        except discord.errors.Forbidden:
+            await commands.permisson_error(message)
                 
         except Exception as e:
-            print(e)
             await commands.notice_error(message, client, e)
+        
+        
 
 client.run(TOKEN)

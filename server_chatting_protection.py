@@ -1,9 +1,17 @@
 import discord
 import asyncio
 import server_everything_id as server_info
+import Assistant_commands as commands
 
-async def protection_text_channel(message):
-    get_member = message.author.guild.get_member(message.author.id)
+async def protection_text_channel(client, message):
+    if message.embeds is not None:
+        return
+
+    if message.attachments is not None:
+        return
+
+    get_guild = client.get_guild(message.author.guild.id)
+    get_member = get_guild.get_member(message.author.id)
 
     member_roles = get_member.roles
     n = 0

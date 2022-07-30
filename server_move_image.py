@@ -8,7 +8,7 @@ from PIL import ImageFilter
 import io
 import requests 
 
-def join_quit_image(status,member):
+async def join_quit_image(status,member):
     left_margin = 15
     right_margin = 15
     top_margin = 15
